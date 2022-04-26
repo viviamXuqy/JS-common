@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>canvas绘制时针</title>
+</head>
+<style type="text/css">
+	.canvas{
+		width:500px;
+		height:500px;
+		margin:0px auto;
+		background-color:#202121;
+		border-radius:100px
+	}
+</style>
+<body>
+	<div class="canvas">
+		<canvas id="canvas" width="500px" height="500px">
+	</div>
+</body>
+<script type="text/javascript">
+/**
+canvas提供两种绘图方式
+1.绘制线 canvas.stroke()//描边
+2.绘制填充的路径 canvas.fill()//填充
+beginPath()通过清空子路径列表开始一个新路径,很重要，记得每画一个新路径前调用此方法
+保存当前绘画环境save(),在最后清除restore()
+clearRect()清除画布
+*/
+let ctxDom= document.getElementById('canvas'),
+context = ctxDom.getContext('2d');
+
+class Clock{
+	constructor(ctx){
+		this.ctx=ctx;
+		let cWidth = ctx.canvas.width;
+		this.r = cWidth/2
+		
+		this.init()
+	}
+	hours=[3,4,5,6,7,8,9,10,11,12,1,2]
+	init(){
+		this.draw()
+		setInterval(this.draw.bind(this),1000)//定时器，模拟秒针每秒走动，重新绘制图形
+	}
+	//获取当前时间
+	getTime(){
+		let date = new Date();
+		return{
+			hour:date.getHours(),
+			minutes:date.getMinutes(),
+			seconds:date.getSeconds(),
+		}
+	}
+	draw(){
+		let ctx= this.ctx,
+		cWidth=ctx.canvas.width,
+		cHeight=ctx.canvas.height
+		ctx.clearRect(0,0,cWidth,cHeight)
+		ctx.save()
+		
+		this.drawPanel()
+		
+		this.drawHourNums()
+		
+		let{hour,minutes,seconds}=this.getTime()
+		this.drawHourIndicate(hour,minutes)
+		this.drawMinuteIndicate(minutes)
+		this.drawSecondIndicate(seconds)
+		
+		this.drawCentralPointer()
+		ctx.restore()
+	}
+	//绘制圆盘
+	drawPanel(){
+		let ctx = this.ctx,r=this.r;
+		ctx.beginPath()
+		ctx.fillStyle = '#fff';//圆的颜色
+		/*ctx.arc(x, y, radius, startAngle, endAngle, anticlockwise);
+		x圆弧中心（圆心）的 x 轴坐标。y圆弧中心（圆心）的 y 轴坐标。radius圆弧的半径。
+		startAngle圆弧的起始点， x轴方向开始计算，单位以弧度表示。
+		endAngle圆弧的终点， 单位以弧度表示。
+		anticlockwise 可选的Boolean值 ，如果为 true，逆时针绘制圆弧，反之，顺时针绘制。 
+		*/
+		ctx.arc(r, r, r-20, 0, 2*Math.PI, false);
+		ctx.fill()
+	}
+	//绘制时钟的1~12文字
+	drawHourNums(){
+		let ctx = this.ctx,
+		r=this.r,
+		radius,
+		x,
+		y
+		ctx.font='40px sans-serif';
+		ctx.fillStyle='#000';
+		ctx.textAlign='center'//水平居中
+		ctx.textBaseline='middle'//垂直居中
+		
+		ctx.translate(r,r);//让圆偏移
+		this.hours.forEach((item,index)=>{
+			radius = 2*Math.PI/12*index//弧度α=l(弧长)/r(半径)=2πr/r=2π,有12等分
+			x=(this.r-60)*Math.cos(radius);
+			y=(this.r-60)*Math.sin(radius);
+			ctx.beginPath()
+			ctx.fillText(item,x,y)
+		})
+		
+	}
+	//绘制圆心点
+	drawCentralPointer(){
+		/*先画大圆，再画小圆
+		*/
+		let ctx = this.ctx
+		ctx.beginPath();
+		ctx.fillStyle='#333';
+		ctx.arc(0,0,13,0,2*Math.PI,false);
+		ctx.fill();
+		
+		ctx.beginPath();
+		ctx.fillStyle='#666';
+		ctx.arc(0,0,6,0,2*Math.PI,false);
+		ctx.fill();
+	}
+	/**画时针
+	1.计算radius：时针的弧度
+	2.因为画布要rotate旋转，所以先保存当前绘画环境save()，在最后清除
+	3.设置画笔的起点坐标moveTo()，终点坐标lineTo()
+	4.rotate(radius)顺时针旋转
+	5.stroke()绘制一条线
+	6.restore()清除保存的绘图
+	*/
+	drawHourIndicate(hour,minutes){
+		let ctx = this.ctx
+		const radius = 2*Math.PI/12*hour,
+		mRadius = 2*Math.PI/12/60*minutes
+		ctx.save()
+		ctx.beginPath();
+		ctx.lineWidth=5;
+		ctx.lineCap = 'round'
+		ctx.rotate(radius+minutes);
+		ctx.moveTo(0,0);//起点坐标
+		ctx.lineTo(0,-this.r/1.8);//终点坐标
+		ctx.stroke();
+		ctx.restore()
+	}
+	//画分针
+	drawMinuteIndicate(minutes){
+		let ctx = this.ctx
+		const radius = 2*Math.PI/60*minutes
+		ctx.save()//因为画布要rotate旋转，所以先保存当前绘画环境，在最后清除
+		ctx.beginPath();
+		ctx.strokeStyle='#f40'
+		ctx.lineWidth=5;
+		ctx.lineCap = 'round'
+		ctx.rotate(radius);
+		ctx.moveTo(0,0);//起点坐标
+		ctx.lineTo(0,-this.r/1.5);//终点坐标
+		ctx.stroke();
+		ctx.restore()//清除保存的绘图，以免影响到后续的绘画
+	}
+	//画秒针
+	drawSecondIndicate(seconds){
+		let ctx = this.ctx
+		const radius = 2*Math.PI/60*seconds
+		ctx.save()
+		ctx.beginPath();
+		ctx.strokeStyle='orange'
+		ctx.lineWidth=5;
+		ctx.lineCap = 'round'
+		ctx.rotate(radius);
+		ctx.moveTo(0,0);//起点坐标
+		ctx.lineTo(0,-this.r/1.2);//终点坐标
+		ctx.stroke();
+		ctx.restore()
+	}
+
+}
+
+
+new Clock(context)
+</script>
+</html>
